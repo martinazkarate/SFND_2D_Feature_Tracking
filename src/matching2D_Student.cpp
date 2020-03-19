@@ -13,7 +13,7 @@ double matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::K
 
     if (matcherType.compare("MAT_BF") == 0)
     {
-        int normType = descriptorType.compare("DES_BINARY") == 0 ? cv::NORM_HAMMING : cv::NORM_L2;
+        int normType = descriptorType.compare("SIFT") == 0 ? cv::NORM_L2 : cv::NORM_HAMMING;
         matcher = cv::BFMatcher::create(normType, crossCheck);
     }
     else if (matcherType.compare("MAT_FLANN") == 0)
@@ -68,11 +68,13 @@ double descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &des
 
     if (descriptorType.compare("BRISK") == 0)
     {
-        
-        int threshold = 30;        // FAST/AGAST detection threshold score.
-        int octaves = 3;           // detection octaves (use 0 to do single scale)
-        float patternScale = 1.0f; // apply this scale to the pattern used for sampling the neighbourhood of a keypoint.
-        descriptor = cv::BRISK::create(threshold, octaves, patternScale);
+        //int threshold = 30;        // FAST/AGAST detection threshold score.
+        //int octaves = 3;           // detection octaves (use 0 to do single scale)
+        //float patternScale = 1.0f; // apply this scale to the pattern used for sampling the neighbourhood of a keypoint.
+        //descriptor = cv::BRISK::create(threshold, octaves, patternScale);
+
+        // Using default parameters in all descriptors.
+        descriptor = cv::BRISK::create();
     }
     else if (descriptorType.compare("BRIEF") == 0)
     {

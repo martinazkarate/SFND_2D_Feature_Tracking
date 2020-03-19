@@ -220,7 +220,7 @@ int main(int argc, const char *argv[])
             vector<cv::DMatch> matches;
             string matcherType = argv[3];        // MAT_BF, MAT_FLANN
             performances.matcherType = matcherType;
-            string descriptorType = "DES_BINARY"; // DES_BINARY, DES_HOG
+            //string descriptorType = "DES_BINARY"; // DES_BINARY, DES_HOG
             string selectorType = argv[4];       // SEL_NN, SEL_KNN
             performances.selectorType = selectorType;            
 
