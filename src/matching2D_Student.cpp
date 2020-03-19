@@ -42,21 +42,19 @@ double matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::K
         vector<vector<cv::DMatch>> knn_matches;
         double t = (double)cv::getTickCount();
         matcher->knnMatch(descSource, descRef, knn_matches, 2); // Finds the best 2 matches for each descriptor in desc1
-        double t1 = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        cout << matcherType << " matcher found m=" << knn_matches.size() << " matches with selector " << selectorType << " in "<< 1000 * t1 / 1.0 << " ms" << endl;
+        t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+        cout << matcherType << " matcher found m=" << knn_matches.size() << " matches with selector " << selectorType << " in "<< 1000 * t / 1.0 << " ms" << endl;
 
         // Filter matches using descriptor distance ratio 
         double minDescDistRatio = 0.8;
-        t1 = (double)cv::getTickCount();
+        double t1 = (double)cv::getTickCount();
         for (auto it = knn_matches.begin(); it != knn_matches.end(); it++)
         {
             if ((*it)[0].distance < minDescDistRatio * (*it)[1].distance)
                 matches.push_back((*it)[0]);
         }
         t1 = ((double)cv::getTickCount() - t1) / cv::getTickFrequency();
-        cout << "KNN selector removed " << knn_matches.size() - matches.size() << " matches in " << 1000 * t / 1.0 << " ms" << endl;
-        
-        t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+        cout << "KNN selector removed " << knn_matches.size() - matches.size() << " matches in " << 1000 * t1 / 1.0 << " ms" << endl;
         
         return ( 1000 * t / 1.0 );
     }
