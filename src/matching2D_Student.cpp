@@ -4,7 +4,7 @@
 using namespace std;
 
 // Find best matches for keypoints in two camera images based on several matching methods
-void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::KeyPoint> &kPtsRef, cv::Mat &descSource, cv::Mat &descRef,
+double matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::KeyPoint> &kPtsRef, cv::Mat &descSource, cv::Mat &descRef,
                       std::vector<cv::DMatch> &matches, std::string descriptorType, std::string matcherType, std::string selectorType)
 {
     // configure matcher
@@ -33,6 +33,8 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
         matcher->match(descSource, descRef, matches); // Finds the best match for each descriptor in desc1
         t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
         cout << matcherType << " matcher found m=" << matches.size() << " matches with selector " << selectorType << " in "<< 1000 * t / 1.0 << " ms" << endl;
+        
+        return ( 1000 * t / 1.0 );
     }
     else if (selectorType.compare("SEL_KNN") == 0)
     { // k nearest neighbors (k=2)
@@ -40,24 +42,28 @@ void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::Key
         vector<vector<cv::DMatch>> knn_matches;
         double t = (double)cv::getTickCount();
         matcher->knnMatch(descSource, descRef, knn_matches, 2); // Finds the best 2 matches for each descriptor in desc1
-        t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
-        cout << matcherType << " matcher found m=" << knn_matches.size() << " matches with selector " << selectorType << " in "<< 1000 * t / 1.0 << " ms" << endl;
+        double t1 = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+        cout << matcherType << " matcher found m=" << knn_matches.size() << " matches with selector " << selectorType << " in "<< 1000 * t1 / 1.0 << " ms" << endl;
 
         // Filter matches using descriptor distance ratio 
         double minDescDistRatio = 0.8;
-        t = (double)cv::getTickCount();
+        t1 = (double)cv::getTickCount();
         for (auto it = knn_matches.begin(); it != knn_matches.end(); it++)
         {
             if ((*it)[0].distance < minDescDistRatio * (*it)[1].distance)
                 matches.push_back((*it)[0]);
         }
-        t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+        t1 = ((double)cv::getTickCount() - t1) / cv::getTickFrequency();
         cout << "KNN selector removed " << knn_matches.size() - matches.size() << " matches in " << 1000 * t / 1.0 << " ms" << endl;
+        
+        t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
+        
+        return ( 1000 * t / 1.0 );
     }
 }
 
 // Use one of several types of state-of-art descriptors to uniquely identify keypoints
-void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descriptors, string descriptorType)
+double descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descriptors, string descriptorType)
 {
     // select appropriate descriptor: BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
     cv::Ptr<cv::DescriptorExtractor> descriptor;
@@ -90,16 +96,23 @@ void descKeypoints(vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &descr
     {   
         descriptor = cv::xfeatures2d::SIFT::create();
     }
+    else
+    {
+        cout << "The descriptor type is not implemented. Exiting now." << endl;
+        return -1;
+    }
 
     // perform feature description
     double t = (double)cv::getTickCount();
     descriptor->compute(img, keypoints, descriptors);
     t = ((double)cv::getTickCount() - t) / cv::getTickFrequency();
     cout << descriptorType << " descriptor extraction in " << 1000 * t / 1.0 << " ms" << endl;
+    
+    return ( 1000 * t / 1.0 );
 }
 
 // Detect keypoints in image using the traditional Shi-Thomasi detector
-void detKeypointsShiTomasi(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis)
+double detKeypointsShiTomasi(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis)
 {
     // compute detector parameters based on image size
     int blockSize = 4;       //  size of an average block for computing a derivative covariation matrix over each pixel neighborhood
@@ -137,9 +150,10 @@ void detKeypointsShiTomasi(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool b
         imshow(windowName, visImage);
         cv::waitKey(0);
     }
+    return ( 1000 * t / 1.0 );
 }
 
-void detKeypointsHarris(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis)
+double detKeypointsHarris(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool bVis)
 {
     // Detector parameters
     int blockSize = 2; // for every pixel, a blockSize × blockSize neighborhood is considered
@@ -204,9 +218,10 @@ void detKeypointsHarris(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool
         imshow(windowName, visImage);
         cv::waitKey(0);
     }
+    return ( 1000 * t / 1.0 );
 }
 
-void detKeypointsModern(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, std::string detectorType, bool bVis)
+double detKeypointsModern(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, std::string detectorType, bool bVis)
 {
     // FAST, BRISK, ORB, AKAZE, SIFT
     cv::Ptr<cv::FeatureDetector> detector;
@@ -251,4 +266,5 @@ void detKeypointsModern(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, std:
         imshow(windowName, visImage);
         cv::waitKey(0);
     }
+    return ( 1000 * t / 1.0 );
 }

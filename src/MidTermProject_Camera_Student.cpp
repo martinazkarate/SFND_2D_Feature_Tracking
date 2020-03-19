@@ -6,6 +6,9 @@
 #include <vector>
 #include <cmath>
 #include <limits>
+#include <string>
+#include <cstdlib>
+
 #include <opencv2/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -18,10 +21,28 @@
 
 using namespace std;
 
+struct perfStats {
+  string detectorType;
+  string descriptorType;
+  string matcherType;
+  string selectorType;
+  int   numKeyPointsPerframe[10];
+  int   numKeyPointsPerROI[10];
+  int   numMatchedKeyPoints[10];
+  double detectorTime[10];
+  double descriptorTime[10];
+  double matcherTime[10];
+};
+
 /* MAIN PROGRAM */
 int main(int argc, const char *argv[])
 {
 
+    if (argc != 5)
+    {
+        cout << "Please provide as CLI arguments the detector, descriptor, matcher and selector types to be used. Exiting now. " << endl;
+        return EXIT_FAILURE;
+    }
     /* INIT VARIABLES AND DATA STRUCTURES */
 
     // data location
@@ -39,6 +60,30 @@ int main(int argc, const char *argv[])
     int dataBufferSize = 2;       // no. of images which are held in memory (ring buffer) at the same time
     vector<DataFrame> dataBuffer; // list of data frames which are held in memory at the same time
     bool bVis = false;            // visualize results
+
+    // struct to hold performances for evalutation 
+    perfStats performances;
+    
+    std::string filename = "../data.csv";
+    std::ofstream output_stream(filename, std::ios::binary | std::ios::app);
+
+    if (!output_stream.is_open()) {
+        std::cerr << "failed to open file: " << filename << std::endl;
+        return EXIT_FAILURE;
+    }
+  
+    // write CSV header row
+    output_stream << "Detector Type" << ","
+                << "Descriptor Type" << ","
+                << "Frame#" << ","
+                << "#KeyPointsPerFrame" << ","
+                << "#KeyPointsPerROI" << ","
+                << "DetectorTime(ms)" << ","
+                << "DescriptorTime(ms)" << ","
+                << "Matcher Type" << ","
+                << "Selector Type" << ","
+                << "#MatchedPoints" << "," 
+                << "MatchingTime(ms))" << std::endl;
 
     /* MAIN LOOP OVER ALL IMAGES */
 
@@ -75,7 +120,8 @@ int main(int argc, const char *argv[])
 
         // extract 2D keypoints from current image
         vector<cv::KeyPoint> keypoints; // create empty feature list for current image
-        string detectorType = "SHITOMASI";
+        string detectorType = argv[1]; // SHITOMASI, HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
+        performances.detectorType = detectorType;
 
         //// STUDENT ASSIGNMENT
         //// TASK MP.2 -> add the following keypoint detectors in file matching2D.cpp and enable string-based selection based on detectorType
@@ -83,21 +129,23 @@ int main(int argc, const char *argv[])
 
         if (detectorType.compare("SHITOMASI") == 0)
         {
-            detKeypointsShiTomasi(keypoints, imgGray, false);
+            performances.detectorTime[imgIndex] = detKeypointsShiTomasi(keypoints, imgGray, false);
         }
         else if(detectorType.compare("HARRIS") == 0)
         {
-            detKeypointsHarris(keypoints, imgGray, false);
+            performances.detectorTime[imgIndex] = detKeypointsHarris(keypoints, imgGray, false);
         }
         else if (detectorType.compare("FAST") == 0 || detectorType.compare("BRISK") == 0 || detectorType.compare("ORB") == 0 || detectorType.compare("AKAZE") == 0 || detectorType.compare("SIFT") == 0)
         {
-            detKeypointsModern(keypoints, imgGray, detectorType, false);
+            performances.detectorTime[imgIndex] = detKeypointsModern(keypoints, imgGray, detectorType, false);
         }
         else
         {
             cout << "The detector type is not implemented. Exiting now." << endl;
-            return -1;
+            return EXIT_FAILURE;
         }
+
+        performances.numKeyPointsPerframe[imgIndex] = keypoints.size();
         
         
         //// EOF STUDENT ASSIGNMENT
@@ -118,6 +166,8 @@ int main(int argc, const char *argv[])
             }
             keypoints = keypoints_vehicle;
         }
+
+        performances.numKeyPointsPerROI[imgIndex] = keypoints.size();
 
         //// EOF STUDENT ASSIGNMENT
 
@@ -146,8 +196,15 @@ int main(int argc, const char *argv[])
         //// -> BRIEF, ORB, FREAK, AKAZE, SIFT
 
         cv::Mat descriptors;
-        string descriptorType = "BRISK"; // BRIEF, ORB, FREAK, AKAZE, SIFT
-        descKeypoints((dataBuffer.end() - 1)->keypoints, (dataBuffer.end() - 1)->cameraImg, descriptors, descriptorType);
+        string descriptorType = argv[2]; // BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
+        performances.descriptorType = descriptorType;
+        performances.descriptorTime[imgIndex] = descKeypoints((dataBuffer.end() - 1)->keypoints, (dataBuffer.end() - 1)->cameraImg, descriptors, descriptorType);
+        
+        if (performances.descriptorTime[imgIndex] < 0)
+        {
+            cout << "Descriptor extraction failed." << endl;
+            return EXIT_FAILURE;
+        }          
         //// EOF STUDENT ASSIGNMENT
 
         // push descriptors for current frame to end of data buffer
@@ -161,18 +218,21 @@ int main(int argc, const char *argv[])
             /* MATCH KEYPOINT DESCRIPTORS */
 
             vector<cv::DMatch> matches;
-            string matcherType = "MAT_BF";        // MAT_BF, MAT_FLANN
+            string matcherType = argv[3];        // MAT_BF, MAT_FLANN
+            performances.matcherType = matcherType;
             string descriptorType = "DES_BINARY"; // DES_BINARY, DES_HOG
-            string selectorType = "SEL_NN";       // SEL_NN, SEL_KNN
+            string selectorType = argv[4];       // SEL_NN, SEL_KNN
+            performances.selectorType = selectorType;            
 
             //// STUDENT ASSIGNMENT
             //// TASK MP.5 -> add FLANN matching in file matching2D.cpp
             //// TASK MP.6 -> add KNN match selection and perform descriptor distance ratio filtering with t=0.8 in file matching2D.cpp
 
-            matchDescriptors((dataBuffer.end() - 2)->keypoints, (dataBuffer.end() - 1)->keypoints,
+            performances.matcherTime[imgIndex] = matchDescriptors((dataBuffer.end() - 2)->keypoints, (dataBuffer.end() - 1)->keypoints,
                              (dataBuffer.end() - 2)->descriptors, (dataBuffer.end() - 1)->descriptors,
                              matches, descriptorType, matcherType, selectorType);
 
+            performances.numMatchedKeyPoints[imgIndex] = matches.size();
             //// EOF STUDENT ASSIGNMENT
 
             // store matches in current data frame
@@ -194,13 +254,39 @@ int main(int argc, const char *argv[])
                 string windowName = "Matching keypoints between two camera images";
                 cv::namedWindow(windowName, 7);
                 cv::imshow(windowName, matchImg);
+                cout << endl;
                 cout << "Press key to continue to next image" << endl;
                 cv::waitKey(0); // wait for key to be pressed
             }
             bVis = false;
         }
+        else
+        {
+            performances.matcherType = argv[3];
+            performances.selectorType = argv[4];
+            performances.matcherTime[imgIndex] = 0.0;
+            performances.numMatchedKeyPoints[imgIndex] = 0;
+            cout << endl;
+        }
+        
 
     } // eof loop over all images
+    for (int i = 0; i < 10; i++) 
+    {
+        output_stream << performances.detectorType
+                << "," << performances.descriptorType
+                << "," << i
+                << "," << performances.numKeyPointsPerframe[i]
+                << "," << performances.numKeyPointsPerROI[i]
+                << "," << std::fixed << std::setprecision(3) << performances.detectorTime[i]
+                << "," << std::fixed << std::setprecision(3) << performances.descriptorTime[i]
+                << "," << performances.matcherType
+                << "," << performances.selectorType
+                << "," << performances.numMatchedKeyPoints[i]
+                << "," << std::fixed << std::setprecision(3) << performances.matcherTime[i] << std::endl;
+    }
+    output_stream << std::endl;
+    output_stream.close();
 
     return 0;
 }
