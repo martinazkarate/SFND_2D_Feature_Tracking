@@ -1,0 +1,26 @@
+MP.0 This file serves as a Mid-Term Project Report where all the rubric points are addressed. 
+
+MP.1 This is implemented by push_back frames in the dataBuffer, then checking its size against the size limit and erase from vector begin() when size is excedeed.
+
+MP.2 All Detector types are implemented and selectable by string. The string is passed as CLI argument. Shi-Tomasi and Harris have their own functions in matching2D.cpp.
+The rest of detectors are implemented in a common function "modern".
+
+MP.3 Keypoints outside of the defined rectangle are filtered by using the contains() method of Rect class.
+
+MP.4 All Descriptor types are implemented and selectable by string. The string is passed as CLI argument. 
+They are all implemented in the same function in matching2D.cpp called descKeypoints().
+
+MP.5 FLANN and KNN are implemented in matching2D.cpp and selectable by string. The string is passed as CLI argument.
+
+MP.6 In KNN the descriptor distance ratio test is implemented to filter outlier matches (FPs). 
+
+MP.7 The counting of keypoints within the ROI is done for all detectors. This data is saved into a data.csv file.
+
+MP.8 The counting of matched keypoints using all combinations is done. This data is saved into a data.csv file.
+
+MP.9 Execution times for detectors and descriptors is logged. This data is also contained in the data.csv file.
+
+TOP3 Detector/Descriptor combination recommendation:
+1. 
+2. 
+3. 
