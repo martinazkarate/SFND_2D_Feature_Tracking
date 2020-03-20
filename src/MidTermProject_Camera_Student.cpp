@@ -76,23 +76,25 @@ int main(int argc, const char *argv[])
     vector<string> descriptor_list = {"BRISK","BRIEF","ORB","FREAK","AKAZE","SIFT"};
     string detector, descriptor;
 
-    for (int det = 0; det <= detector_list.size() ; det++) // detector loop
+    for (int det = 0; det < detector_list.size() ; det++) // detector loop
     {
         detector = detector_list[det];
+        cout << "Detector is " << detector << endl;
 
-    for (int des = 0; des <= descriptor_list.size(); des++) // descriptor loop
+    for (int des = 0; des < descriptor_list.size(); des++) // descriptor loop
     {
         descriptor = descriptor_list[des];
+        cout << "Descriptor is " << descriptor << endl;
 
     if ( descriptor.compare("AKAZE") == 0 && detector.compare("AKAZE") != 0 )
     {
         // AKAZE descriptor requires AKAZE detector only.
-        break;
+        continue;
     }
     if ( detector.compare("SIFT") == 0 && descriptor.compare("ORB") == 0 )
     {
         // SIFT detector and ORB descriptor combination not valid.
-        break;
+        continue;
     }
     while (!dataBuffer.empty())
     {
