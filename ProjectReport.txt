@@ -4,6 +4,9 @@ MP.1 This is implemented by push_back frames in the dataBuffer, then checking it
 
 MP.2 All Detector types are implemented and selectable by string. The string is passed as CLI argument. Shi-Tomasi and Harris have their own functions in matching2D.cpp.
 The rest of detectors are implemented in a common function "modern".
+Note: The NMS implementation of Harris (which is provided in lesson 4.2 of this Camera course) has a potential bug (I think). NewKeyPoints that overlap previously stored
+keypoints can replace a keypoint in the list without checking if this NewKeyPoint has some overlap with the remaining keypoints in the list. This case can happen when a 
+NewKeyPoint overlaps with more than one keypoint in the list at the same time.
 
 MP.3 Keypoints outside of the defined rectangle are filtered by using the contains() method of Rect class.
 
@@ -15,12 +18,22 @@ MP.5 FLANN and KNN are implemented in matching2D.cpp and selectable by string. T
 MP.6 In KNN the descriptor distance ratio test is implemented to filter outlier matches (FPs). 
 
 MP.7 The counting of keypoints within the ROI is done for all detectors. This data is saved into a data.csv file.
+Shi-Tomasi: Fair amount of keypoints. Mainly concentrated on tail lights, license plate, roof and structural corners.
+Harris: Few keypoints in tail lights and roof.
+FAST: Big amount of keypoints with sparse distribution.
+BRISK: Good amount of keypoints and spread. Difficult to judge due to large size of circles.
+ORB: Fair amount of keypoints mainly concentrated in tail lights and roof.
+AKAZE: Fair amount of keypoints and spread. No keypoints in license plate.
+SIFT: Fair amount of keypoints quite well distributed.
 
 MP.8 The counting of matched keypoints using all combinations is done. This data is saved into a data.csv file.
 
 MP.9 Execution times for detectors and descriptors is logged. This data is also contained in the data.csv file.
 
+An excel sheet called performances_aggregates.xlsx is a processed version of data.csv where some averaging is performed and the best combination of descriptor for each detector
+is proposed considering the execution times.
+
 TOP3 Detector/Descriptor combination recommendation:
-1. 
-2. 
-3. 
+1. If we consider real-time applications with shortest exection times then the pair FAST-ORB seems to be winner, runner-up would be ORB-BRISK.
+2. With respect to the number of matched points FAST-ORB is again on top, followed by BRISK-BRIEF and AKAZE-BRIEF combination.
+3. No judgement on the quality of keypoints made at this project.
