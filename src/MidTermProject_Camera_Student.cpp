@@ -233,6 +233,41 @@ int main(int argc, const char *argv[])
                              matches, descriptorType, matcherType, selectorType);
 
             performances.numMatchedKeyPoints[imgIndex] = matches.size();
+
+            // Evaluation of quality of matches. 
+            // 1.- Statistics of match distance metric
+            vector<float> distances(matches.size());
+            for (auto match = matches.begin(); match != matches.end(); match++)
+            {
+                distances.push_back((*match).distance);
+            }
+            // Mean of distances
+            float sum = std::accumulate(distances.begin(), distances.end(), 0.0);
+            float mean = sum / distances.size();
+
+            // Standard Dev of distances
+            vector<float> diff(distances.size());
+            transform(distances.begin(), distances.end(), diff.begin(), [mean](float x) { return x - mean; });
+            float sq_sum = inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+            float stdev = sqrt(sq_sum / distances.size());
+
+            // 2.- Statistics of keypoints euclidean distance in image
+            vector<float> distances2(matches.size());
+            for (auto match = matches.begin(); match != matches.end(); match++)
+            {
+                cv::KeyPoint queryKpt = (dataBuffer.end() - 2)->keypoints[(*match).queryIdx];
+                cv::KeyPoint trainKpt = (dataBuffer.end() - 1)->keypoints[(*match).trainIdx];
+                distances2.push_back(norm(queryKpt.pt-trainKpt.pt));
+            }
+            // Mean of distances
+            float sum2 = std::accumulate(distances2.begin(), distances2.end(), 0.0);
+            float mean2 = sum2 / distances2.size();
+
+            // Standard Dev of distances
+            vector<float> diff2(distances2.size());
+            transform(distances2.begin(), distances2.end(), diff2.begin(), [mean2](float x) { return x - mean2; });
+            float sq_sum2 = inner_product(diff2.begin(), diff2.end(), diff2.begin(), 0.0);
+            float stdev2 = sqrt(sq_sum2 / distances2.size());
             //// EOF STUDENT ASSIGNMENT
 
             // store matches in current data frame
@@ -242,7 +277,7 @@ int main(int argc, const char *argv[])
 
             // visualize matches between current and previous image
             bVis = true;
-            if (bVis)
+            if (bVis && imgIndex==imgEndIndex)
             {
                 cv::Mat matchImg = ((dataBuffer.end() - 1)->cameraImg).clone();
                 cv::drawMatches((dataBuffer.end() - 2)->cameraImg, (dataBuffer.end() - 2)->keypoints,
@@ -256,6 +291,13 @@ int main(int argc, const char *argv[])
                 cv::imshow(windowName, matchImg);
                 cout << endl;
                 cout << "Press key to continue to next image" << endl;
+                
+                //Store matchImg on disk
+                cv::Point2f top_left(50, 50);
+                string overlay_text = "Detector: " + detectorType + ", Descriptor: " + descriptorType;
+                cv::Scalar font_color(0, 0, 255);
+                cv::putText(matchImg, overlay_text, top_left, cv::FONT_HERSHEY_COMPLEX, 1, font_color);
+                cv::imwrite("../"+detectorType+"-"+descriptorType+"_output_image.png", img);
                 cv::waitKey(0); // wait for key to be pressed
             }
             bVis = false;
