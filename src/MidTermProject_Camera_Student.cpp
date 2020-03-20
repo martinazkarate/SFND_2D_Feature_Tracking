@@ -38,11 +38,11 @@ struct perfStats {
 int main(int argc, const char *argv[])
 {
 
-    if (argc != 5)
-    {
-        cout << "Please provide as CLI arguments the detector, descriptor, matcher and selector types to be used. Exiting now. " << endl;
-        return EXIT_FAILURE;
-    }
+    // if (argc != 5)
+    // {
+    //     cout << "Please provide as CLI arguments the detector, descriptor, matcher and selector types to be used. Exiting now. " << endl;
+    //     return EXIT_FAILURE;
+    // }
     /* INIT VARIABLES AND DATA STRUCTURES */
 
     // data location
@@ -71,7 +71,34 @@ int main(int argc, const char *argv[])
         std::cerr << "failed to open file: " << filename << std::endl;
         return EXIT_FAILURE;
     }
-  
+
+    vector<string> detector_list   = {"SHITOMASI","HARRIS","FAST","BRISK","ORB","AKAZE","SIFT"};
+    vector<string> descriptor_list = {"BRISK","BRIEF","ORB","FREAK","AKAZE","SIFT"};
+    string detector, descriptor;
+
+    for (int det = 0; det <= detector_list.size() ; det++) // detector loop
+    {
+        detector = detector_list[det];
+
+    for (int des = 0; des <= descriptor_list.size(); des++) // descriptor loop
+    {
+        descriptor = descriptor_list[des];
+
+    if ( descriptor.compare("AKAZE") == 0 && detector.compare("AKAZE") != 0 )
+    {
+        // AKAZE descriptor requires AKAZE detector only.
+        break;
+    }
+    if ( detector.compare("SIFT") == 0 && descriptor.compare("ORB") == 0 )
+    {
+        // SIFT detector and ORB descriptor combination not valid.
+        break;
+    }
+    while (!dataBuffer.empty())
+    {
+        dataBuffer.erase(dataBuffer.begin());
+    }
+        
     // write CSV header row
     output_stream << "Detector Type" << ","
                 << "Descriptor Type" << ","
@@ -120,7 +147,7 @@ int main(int argc, const char *argv[])
 
         // extract 2D keypoints from current image
         vector<cv::KeyPoint> keypoints; // create empty feature list for current image
-        string detectorType = argv[1]; // SHITOMASI, HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
+        string detectorType = detector; // argv[1]; // SHITOMASI, HARRIS, FAST, BRISK, ORB, AKAZE, SIFT
         performances.detectorType = detectorType;
 
         //// STUDENT ASSIGNMENT
@@ -196,7 +223,7 @@ int main(int argc, const char *argv[])
         //// -> BRIEF, ORB, FREAK, AKAZE, SIFT
 
         cv::Mat descriptors;
-        string descriptorType = argv[2]; // BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
+        string descriptorType = descriptor; // argv[2]; // BRISK, BRIEF, ORB, FREAK, AKAZE, SIFT
         performances.descriptorType = descriptorType;
         performances.descriptorTime[imgIndex] = descKeypoints((dataBuffer.end() - 1)->keypoints, (dataBuffer.end() - 1)->cameraImg, descriptors, descriptorType);
         
@@ -218,10 +245,10 @@ int main(int argc, const char *argv[])
             /* MATCH KEYPOINT DESCRIPTORS */
 
             vector<cv::DMatch> matches;
-            string matcherType = argv[3];        // MAT_BF, MAT_FLANN
+            string matcherType = "MAT_BF"; // argv[3];        // MAT_BF, MAT_FLANN
             performances.matcherType = matcherType;
             //string descriptorType = "DES_BINARY"; // DES_BINARY, DES_HOG
-            string selectorType = argv[4];       // SEL_NN, SEL_KNN
+            string selectorType = "SEL_KNN"; // argv[4];       // SEL_NN, SEL_KNN
             performances.selectorType = selectorType;            
 
             //// STUDENT ASSIGNMENT
@@ -304,8 +331,8 @@ int main(int argc, const char *argv[])
         }
         else
         {
-            performances.matcherType = argv[3];
-            performances.selectorType = argv[4];
+            performances.matcherType = "MAT_BF"; // argv[3];
+            performances.selectorType = "SEL_KNN"; // argv[4];
             performances.matcherTime[imgIndex] = 0.0;
             performances.numMatchedKeyPoints[imgIndex] = 0;
             cout << endl;
@@ -328,6 +355,8 @@ int main(int argc, const char *argv[])
                 << "," << std::fixed << std::setprecision(3) << performances.matcherTime[i] << std::endl;
     }
     output_stream << std::endl;
+    } // end loop descriptors
+    } // end loop detectors
     output_stream.close();
 
     return 0;
