@@ -29,6 +29,10 @@ struct perfStats {
   int   numKeyPointsPerframe[10];
   int   numKeyPointsPerROI[10];
   int   numMatchedKeyPoints[10];
+  float neighboorhoodSizeMean[10];
+  float neighboorhoodSizeVariance[10];
+  float matchDistanceMean[10];
+  float matchDistanceVariance[10];
   double detectorTime[10];
   double descriptorTime[10];
   double matcherTime[10];
@@ -107,11 +111,15 @@ int main(int argc, const char *argv[])
                 << "Frame#" << ","
                 << "#KeyPointsPerFrame" << ","
                 << "#KeyPointsPerROI" << ","
+                << "NeighborhoodSizeMean" << ","
+                << "NeighborhoodSizeVariance" << ","
                 << "DetectorTime(ms)" << ","
                 << "DescriptorTime(ms)" << ","
                 << "Matcher Type" << ","
                 << "Selector Type" << ","
                 << "#MatchedPoints" << "," 
+                << "MatchDistancesMean" << ","
+                << "MatchDistancesVariance" << ","
                 << "MatchingTime(ms))" << std::endl;
 
     /* MAIN LOOP OVER ALL IMAGES */
@@ -198,6 +206,24 @@ int main(int argc, const char *argv[])
 
         performances.numKeyPointsPerROI[imgIndex] = keypoints.size();
 
+        // Evaluate distribution of neighborhood size of keypoints
+        vector<float> sizes(keypoints.size());
+        for (auto keypoint = keypoints.begin(); keypoint != keypoints.end(); keypoint++)
+        {
+            sizes.push_back((*keypoint).size);
+        } 
+        double sizes_mean = std::accumulate(sizes.begin(), sizes.end(), 0.0)/sizes.size();
+        auto add_square = [sizes_mean](double sum, int i)
+        {
+            auto d = i - sizes_mean;
+            return sum + d*d;
+        };
+        double total = std::accumulate(sizes.begin(), sizes.end(), 0.0, add_square);
+        double sizes_variance = total / sizes.size();
+
+        performances.neighboorhoodSizeMean[imgIndex] = sizes_mean;
+        performances.neighboorhoodSizeVariance[imgIndex] = sizes_variance;
+
         //// EOF STUDENT ASSIGNMENT
 
         // optional : limit number of keypoints (helpful for debugging and learning)
@@ -272,13 +298,16 @@ int main(int argc, const char *argv[])
             }
             // Mean of distances
             float sum = std::accumulate(distances.begin(), distances.end(), 0.0);
-            float mean = sum / distances.size();
+            float distances_mean = sum / distances.size();
 
             // Standard Dev of distances
             vector<float> diff(distances.size());
-            transform(distances.begin(), distances.end(), diff.begin(), [mean](float x) { return x - mean; });
+            transform(distances.begin(), distances.end(), diff.begin(), [distances_mean](float x) { return x - distances_mean; });
             float sq_sum = inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
-            float stdev = sqrt(sq_sum / distances.size());
+            float distances_variance = sq_sum / distances.size();
+
+            performances.matchDistanceMean[imgIndex] = distances_mean;
+            performances.matchDistanceVariance[imgIndex] = distances_variance;
 
             // 2.- Statistics of keypoints euclidean distance in image
             vector<float> distances2(matches.size());
@@ -317,17 +346,17 @@ int main(int argc, const char *argv[])
 
                 string windowName = "Matching keypoints between two camera images";
                 cv::namedWindow(windowName, 7);
+                cv::Point2f top_left(50, 50);
+                string overlay_text = "Detector: " + detectorType + ", Descriptor: " + descriptorType;
+                cv::Scalar font_color(0, 0, 255);
+                cv::putText(matchImg, overlay_text, top_left, cv::FONT_HERSHEY_COMPLEX, 1, font_color);
                 cv::imshow(windowName, matchImg);
                 cout << endl;
                 cout << "Press key to continue to next image" << endl;
                 
                 //Store matchImg on disk
-                cv::Point2f top_left(50, 50);
-                string overlay_text = "Detector: " + detectorType + ", Descriptor: " + descriptorType;
-                cv::Scalar font_color(0, 0, 255);
-                cv::putText(matchImg, overlay_text, top_left, cv::FONT_HERSHEY_COMPLEX, 1, font_color);
-                cv::imwrite("../"+detectorType+"-"+descriptorType+"_output_image.png", img);
-                cv::waitKey(0); // wait for key to be pressed
+                cv::imwrite("../"+detectorType+"-"+descriptorType+"_output_image.png", matchImg);
+                //cv::waitKey(0); // wait for key to be pressed
             }
             bVis = false;
         }
@@ -349,11 +378,15 @@ int main(int argc, const char *argv[])
                 << "," << i
                 << "," << performances.numKeyPointsPerframe[i]
                 << "," << performances.numKeyPointsPerROI[i]
+                << "," << performances.neighboorhoodSizeMean[i]
+                << "," << performances.neighboorhoodSizeVariance[i]
                 << "," << std::fixed << std::setprecision(3) << performances.detectorTime[i]
                 << "," << std::fixed << std::setprecision(3) << performances.descriptorTime[i]
                 << "," << performances.matcherType
                 << "," << performances.selectorType
                 << "," << performances.numMatchedKeyPoints[i]
+                << "," << performances.matchDistanceMean[i]
+                << "," << performances.matchDistanceVariance[i]
                 << "," << std::fixed << std::setprecision(3) << performances.matcherTime[i] << std::endl;
     }
     output_stream << std::endl;
